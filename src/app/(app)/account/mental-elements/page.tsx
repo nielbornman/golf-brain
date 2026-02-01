@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { useSession } from "@/hooks/useSession";
-import { listMentalElements, addMentalElement, deleteMentalElement } from "@/lib/mentalElements";
+import {
+  listMentalElements,
+  addMentalElement,
+  deleteMentalElement,
+} from "@/lib/mentalElements";
 
-type Item = {
+type MentalElement = {
   id: string;
   label: string;
 };
@@ -21,19 +24,19 @@ function dangerText(msg: string) {
 
 export default function MentalElementsPage() {
   const { session, isLoading, supabase } = useSession();
-  const userId: string | null = session?.user.id ?? null;
+  const userId = session?.user.id;
 
-  const [items, setItems] = useState<Item[]>([]);
-  const [label, setLabel] = useState("");
+  const [items, setItems] = useState<MentalElement[]>([]);
+  const [newLabel, setNewLabel] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ SAFE LOAD — never call lib with null userId
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      // ✅ hard guard: don’t call the lib with null
       if (!userId) {
         setItems([]);
         setLoading(false);
@@ -44,10 +47,11 @@ export default function MentalElementsPage() {
       setError(null);
 
       try {
-        const list = await listMentalElements(supabase as SupabaseClient, userId);
-        if (!cancelled) setItems(list as unknown as Item[]);
+        const list = await listMentalElements(supabase, userId);
+        if (!cancelled) setItems(list);
       } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "Failed to load mental elements.");
+        if (!cancelled)
+          setError(e?.message ?? "Failed to load mental elements.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -63,17 +67,17 @@ export default function MentalElementsPage() {
   async function onAdd() {
     if (!userId) return;
 
-    const v = label.trim();
-    if (!v) return;
+    const label = newLabel.trim();
+    if (!label) return;
 
     setSaving(true);
     setError(null);
 
     try {
-      await addMentalElement(supabase as SupabaseClient, userId, v);
-      setLabel("");
-      const list = await listMentalElements(supabase as SupabaseClient, userId);
-      setItems(list as unknown as Item[]);
+      await addMentalElement(supabase, userId, label);
+      setNewLabel("");
+      const list = await listMentalElements(supabase, userId);
+      setItems(list);
     } catch (e: any) {
       setError(e?.message ?? "Failed to add mental element.");
     } finally {
@@ -88,9 +92,9 @@ export default function MentalElementsPage() {
     setError(null);
 
     try {
-      await deleteMentalElement(supabase as SupabaseClient, id);
-      const list = await listMentalElements(supabase as SupabaseClient, userId);
-      setItems(list as unknown as Item[]);
+      await deleteMentalElement(supabase, id);
+      const list = await listMentalElements(supabase, userId);
+      setItems(list);
     } catch (e: any) {
       setError(e?.message ?? "Failed to delete mental element.");
     } finally {
@@ -101,16 +105,13 @@ export default function MentalElementsPage() {
   if (isLoading || loading) {
     return (
       <div className="container-app mode-briefing">
-        <div className="stack">
-          <div className="card card-pad">
-            <div className="meta">Loading…</div>
-          </div>
+        <div className="card card-pad">
+          <div className="meta">Loading…</div>
         </div>
       </div>
     );
   }
 
-  // If not signed in, keep it calm and route back
   if (!userId) {
     return (
       <div className="container-app mode-briefing">
@@ -126,7 +127,9 @@ export default function MentalElementsPage() {
           </div>
 
           <div className="card card-pad">
-            <div className="meta">Please sign in to manage your mental elements.</div>
+            <div className="meta">
+              Please sign in to manage your mental elements.
+            </div>
           </div>
         </div>
       </div>
@@ -139,7 +142,9 @@ export default function MentalElementsPage() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="title">Mental Elements</h1>
-            <div className="meta">Cues you want to track (e.g., Commitment, Target).</div>
+            <div className="meta">
+              Cues you want to track (e.g. Commitment, Target).
+            </div>
           </div>
 
           <Link href="/account" className="btn btn-ghost btn-inline">
@@ -150,14 +155,14 @@ export default function MentalElementsPage() {
         {error ? dangerText(error) : null}
 
         <div className="card card-pad">
-          <div className="section-title">Add an element</div>
+          <div className="section-title">Add element</div>
 
           <div className="stack-xs" style={{ marginTop: "var(--sp-3)" }}>
             <input
               className="input"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g., Commitment"
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              placeholder="e.g. Commitment"
               disabled={saving}
             />
 
@@ -165,7 +170,7 @@ export default function MentalElementsPage() {
               type="button"
               className="btn btn-primary"
               onClick={onAdd}
-              disabled={saving || !label.trim()}
+              disabled={saving || !newLabel.trim()}
               style={{ width: "100%" }}
             >
               {saving ? "Saving…" : "Add"}
@@ -175,9 +180,6 @@ export default function MentalElementsPage() {
 
         <div className="card card-pad">
           <div className="section-title">Your elements</div>
-          <div className="meta" style={{ marginTop: "var(--sp-2)" }}>
-            Ordered list (v1).
-          </div>
 
           <div className="stack-xs" style={{ marginTop: "var(--sp-4)" }}>
             {items.length === 0 ? (
@@ -185,10 +187,8 @@ export default function MentalElementsPage() {
             ) : (
               items.map((it, idx) => (
                 <div key={it.id} className="row row-compact">
-                  <div style={{ minWidth: 0 }}>
-                    <div className="body">
-                      {idx + 1}. {it.label}
-                    </div>
+                  <div className="body">
+                    {idx + 1}. {it.label}
                   </div>
 
                   <button

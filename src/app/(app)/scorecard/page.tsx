@@ -139,6 +139,8 @@ function ConfirmModal({
 
 export default function ScorecardPage() {
   const { session, isLoading, supabase } = useSession();
+
+  // IMPORTANT: keep userId as string | null, but never pass it where string is required unless guarded.
   const userId = session?.user.id ?? null;
 
   const homeClub = useHomeClub(userId ?? undefined);
@@ -165,9 +167,14 @@ export default function ScorecardPage() {
     [bag, selectedClubId]
   );
 
-  // Load mental elements (for cues)
+  // Load mental elements (for cues) — ✅ guard userId
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setMentalElements([]);
+      setLoadingElements(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function load() {
@@ -188,9 +195,10 @@ export default function ScorecardPage() {
     };
   }, [supabase, userId]);
 
-  // Load bag clubs (for BSM + optional club selection)
+  // Load bag clubs — ✅ guard userId
   useEffect(() => {
     if (!userId) return;
+
     let cancelled = false;
 
     async function loadBag() {
@@ -200,7 +208,7 @@ export default function ScorecardPage() {
         setBag(list);
         setSelectedClubId(list[0]?.id ?? "");
       } catch {
-        // bag is optional; ignore silently
+        // bag optional
       }
     }
 
@@ -210,9 +218,16 @@ export default function ScorecardPage() {
     };
   }, [supabase, userId]);
 
-  // Load or resume active round
+  // Load or resume active round — ✅ guard userId
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setRound(null);
+      setActiveHole(1);
+      setStrokes([]);
+      setMentalPct(0);
+      setLoadingRound(false);
+      return;
+    }
     if (homeClub.status !== "present") return;
 
     let cancelled = false;
@@ -263,7 +278,7 @@ export default function ScorecardPage() {
     };
   }, [supabase, userId, homeClub.status]);
 
-  // Persist active hole in localStorage
+  // Persist active hole
   useEffect(() => {
     if (!round) return;
     localStorage.setItem(roundKey(round.id), String(activeHole));
@@ -329,12 +344,13 @@ export default function ScorecardPage() {
       await setStrokeMentalOk(supabase, stroke.id, !stroke.mental_ok);
       if (round) await refreshHole(round.id, activeHole);
     } catch (e: any) {
-      setError(e?.message ?? "Failed to update mental focus.");
+      setError(e?.message ?? "Failed to update MF.");
     } finally {
       setSaving(false);
     }
   }
 
+  // ✅ immediate delete (no confirm)
   async function onDeleteStroke(stroke: StrokeRow) {
     setSaving(true);
     setError(null);
@@ -396,6 +412,7 @@ export default function ScorecardPage() {
     });
   }
 
+  // Gate: session loading OR homeclub loading OR round loading
   if (isLoading || homeClub.status === "loading" || loadingRound) {
     return (
       <div className="container-app mode-performance">
@@ -404,6 +421,21 @@ export default function ScorecardPage() {
     );
   }
 
+  // If not signed in, route gently
+  if (!userId) {
+    return (
+      <div className="container-app mode-performance">
+        <div className="stack">
+          <div>
+            <h1 className="title">Scorecard</h1>
+            <div className="meta">Sign in required.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Setup gate
   if (homeClub.status === "missing") {
     return (
       <div className="container-app mode-performance">
@@ -445,10 +477,9 @@ export default function ScorecardPage() {
 
         {error ? dangerText(error) : null}
 
-        {/* 1) Mental Focus */}
+        {/* Mental Focus */}
         <div className="card-hero card-pad">
           <div className="section-title">Mental Focus</div>
-
           <div className="body" style={{ marginTop: "var(--sp-2)" }}>
             {mentalPct}%
           </div>
@@ -481,7 +512,7 @@ export default function ScorecardPage() {
           </div>
         ) : (
           <>
-            {/* 2) Hole */}
+            {/* Hole */}
             <div className="card card-pad">
               <div className="section-title">Hole {activeHole}</div>
               <div className="meta" style={{ marginTop: "var(--sp-2)" }}>
@@ -507,7 +538,7 @@ export default function ScorecardPage() {
                         >
                           {s.seq}. {displayStrokeType(s.stroke_type)}
                         </div>
-                        <div className="meta">Focus: {s.mental_ok ? "Yes" : "No"}</div>
+                        <div className="meta">MF: {s.mental_ok ? "Yes" : "No"}</div>
                       </div>
 
                       <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
@@ -576,7 +607,8 @@ export default function ScorecardPage() {
                   className="btn btn-ghost"
                   style={{
                     width: "100%",
-                    cursor: saving || activeHole >= round.holes_count ? "not-allowed" : "pointer",
+                    cursor:
+                      saving || activeHole >= round.holes_count ? "not-allowed" : "pointer",
                   }}
                 >
                   Next →
@@ -584,7 +616,7 @@ export default function ScorecardPage() {
               </div>
             </div>
 
-            {/* 3) Add stroke */}
+            {/* Add stroke */}
             <div className="card card-pad">
               <div className="section-title">Add stroke</div>
               <div className="meta" style={{ marginTop: "var(--sp-2)" }}>
@@ -616,7 +648,7 @@ export default function ScorecardPage() {
               </div>
             </div>
 
-            {/* 4) Best Shot Memory */}
+            {/* Best Shot Memory */}
             <div className="card card-pad">
               <div className="section-title">Best Shot Memory</div>
               <div className="meta" style={{ marginTop: "var(--sp-2)" }}>
@@ -661,19 +693,15 @@ export default function ScorecardPage() {
         )}
       </div>
 
-      {/* ✅ Fix: render confirm modal so Close round actually shows it */}
       <ConfirmModal
         open={!!confirm}
         onClose={() => setConfirm(null)}
         title={confirm?.title ?? ""}
         body={confirm?.body}
-        confirmLabel={confirm?.confirmLabel ?? "Confirm"}
-        danger={!!confirm?.danger}
+        confirmLabel={confirm?.confirmLabel}
+        danger={confirm?.danger}
+        onConfirm={confirm?.onConfirm ?? (() => {})}
         busy={saving}
-        onConfirm={async () => {
-          if (!confirm) return;
-          await confirm.onConfirm();
-        }}
       />
     </div>
   );
