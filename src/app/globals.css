@@ -1,26 +1,422 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* =========================================================
+   GOLF BRAIN UI — TOKENS (v1) — LOCKED :root
+   Apple-calm • neutral + cool • light card • softly framed
+   ========================================================= */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* ---------- Color (foundation) ---------- */
+    --n-0: 210 20% 99%;
+    --n-1: 210 20% 98%;
+    --n-2: 210 18% 96%;
+    --n-3: 210 16% 93%;
+    --n-4: 214 15% 88%;
+    --n-5: 214 12% 78%;
+
+    --ink-1: 222 25% 14%;
+    --ink-2: 220 10% 40%;
+    --ink-3: 220 8% 55%;
+
+    /* Accent (calm green) */
+    --a-1: 152 50% 42%;
+    --a-2: 152 50% 36%;
+    --a-soft: 152 50% 95%;
+
+    --success: 152 50% 40%;
+    --warning: 38 85% 52%;
+    --danger: 0 70% 52%;
+
+    /* Soft danger (pink-ish, calm) */
+    --danger-soft: 0 70% 96%;
+    --danger-text: 0 55% 42%;
+
+    /* ---------- Semantic color tokens ---------- */
+    --bg-page: var(--n-1);
+    --bg-surface: 0 0% 100%;
+    --bg-muted: var(--n-2);
+    --bg-hover: var(--n-3);
+
+    --border: var(--n-4);
+    --divider: var(--n-4);
+
+    --text: var(--ink-1);
+    --text-2: var(--ink-2);
+    --text-3: var(--ink-3);
+
+    --action: var(--a-1);
+    --action-pressed: var(--a-2);
+    --selection: var(--a-soft);
+    --ring: var(--a-1);
+
+    /* ---------- Spacing scale (px) ---------- */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+    --sp-7: 32px;
+    --sp-8: 40px;
+    --sp-9: 48px;
+
+    /* Screen rhythm defaults */
+    --page-pad: var(--sp-4);
+    --section-gap: var(--sp-6);
+    --card-pad: var(--sp-5);
+
+    /* ---------- Radius ---------- */
+    --r-sm: 10px;
+    --r-md: 14px;
+    --r-lg: 18px;
+    --r-pill: 999px;
+
+    /* ---------- Shadows (light, calm) ---------- */
+    --sh-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --sh-2: 0 8px 22px rgba(0, 0, 0, 0.10);
+
+    /* ---------- Typography ---------- */
+    --fs-title: 22px;
+    --fs-section: 17px;
+    --fs-body: 15px;
+    --fs-meta: 12px;
+
+    --lh-title: 1.25;
+    --lh-body: 1.5;
+    --lh-meta: 1.4;
+
+    /* ---------- Motion ---------- */
+    --t-fast: 120ms;
+    --t-base: 180ms;
+    --t-slow: 240ms;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background: hsl(var(--bg-page));
+    color: hsl(var(--text));
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* =========================================================
+   MODES
+   ========================================================= */
+@layer base {
+  .mode-writing {
+    --section-gap: var(--sp-7);
+  }
+
+  .mode-briefing {
+    --section-gap: var(--sp-6);
+  }
+
+  .mode-performance {
+    /* tighter rhythm for mobile */
+    --section-gap: var(--sp-4);
+    --card-pad: var(--sp-4);
+
+    /* performance mode reduces flourish */
+    --sh-1: 0 0 0 rgba(0, 0, 0, 0);
+    --sh-2: 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+/* =========================================================
+   COMPONENT CLASSES — semantic, reusable
+   ========================================================= */
+@layer components {
+  /* App layout helpers */
+  .app {
+    @apply min-h-dvh bg-[hsl(var(--bg-page))] text-[hsl(var(--text))];
+  }
+
+  .container-app {
+    @apply mx-auto w-full max-w-md;
+    padding-left: var(--page-pad);
+    padding-right: var(--page-pad);
+  }
+
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--section-gap);
+  }
+
+  .stack-sm {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+  }
+
+  .stack-xs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+  }
+
+  /* Typography */
+  .title {
+    font-size: var(--fs-title);
+    line-height: var(--lh-title);
+    @apply font-semibold tracking-tight;
+  }
+
+  .section-title {
+    font-size: var(--fs-section);
+    line-height: 1.35;
+    @apply font-semibold tracking-tight;
+  }
+
+  .body {
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    @apply font-normal;
+  }
+
+  .meta {
+    font-size: var(--fs-meta);
+    line-height: var(--lh-meta);
+    color: hsl(var(--text-2));
+  }
+
+  .muted {
+    color: hsl(var(--text-2));
+  }
+
+  .subtle {
+    color: hsl(var(--text-3));
+  }
+
+  /* Surfaces */
+  .card {
+    border-radius: var(--r-md);
+    background: hsl(var(--bg-surface));
+    box-shadow: var(--sh-1);
+    border: 1px solid hsl(var(--border));
+  }
+
+  .card-hero {
+    border-radius: var(--r-lg);
+    background: hsl(var(--bg-surface));
+    box-shadow: var(--sh-2);
+    border: 1px solid hsl(var(--border));
+  }
+
+  .card-pad {
+    padding: var(--card-pad);
+  }
+
+  .divider {
+    height: 1px;
+    width: 100%;
+    background: hsl(var(--divider));
+  }
+
+  /* Scorecard: stroke rows should not appear interactive */
+.mode-performance .row:hover {
+  background: transparent;
+}
+
+.mode-performance .row:active,
+.mode-performance .row:focus-within {
+  background: transparent;
+}
+
+.mode-performance .btn:hover {
+  background: hsl(var(--bg-muted));
+}
+
+  
+  /* Rows */
+  .row {
+    @apply flex items-center justify-between gap-3;
+    min-height: 44px;
+    padding: var(--sp-4);
+    border-radius: var(--r-sm);
+    background: hsl(var(--bg-surface));
+    border: 1px solid hsl(var(--border));
+    transition: background var(--t-base);
+  }
+
+  .row:hover {
+    background: hsl(var(--bg-hover));
+  }
+
+  .row-compact {
+    min-height: 44px;
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-sm);
+  }
+
+  /* Inset list (Account menu / settings-style list) */
+  .inset-list {
+    border-radius: var(--r-md);
+    background: hsl(var(--bg-surface));
+    border: 1px solid hsl(var(--border));
+    overflow: hidden;
+  }
+
+  .inset-row {
+    @apply flex items-center justify-between gap-3;
+    min-height: 56px;
+    padding: 14px var(--sp-4);
+    background: transparent;
+    transition: background var(--t-base);
+  }
+
+  .inset-row:hover {
+    background: hsl(var(--bg-hover));
+  }
+
+  /* Dividers between inset rows */
+  .inset-row + .inset-row {
+    border-top: 1px solid hsl(var(--divider));
+  }  
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-medium;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: var(--r-sm);
+    transition: transform var(--t-fast), background var(--t-base), opacity var(--t-base);
+    outline: none;
+  }
+
+  /* Scorecard: Mental Focus toggle */
+.mode-performance .gb-mf-btn {
+  background: transparent;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+/* Hover hint (off state) */
+.mode-performance .gb-mf-btn:hover:not(:disabled) {
+  background: hsl(var(--selection));
+}
+
+/* Selected / ON state */
+.mode-performance .gb-mf-btn.is-on {
+  background: hsl(var(--selection));
+}
+
+  .btn:active {
+    transform: translateY(0.5px);
+  }
+
+  .btn:focus-visible {
+    box-shadow: 0 0 0 3px hsl(var(--selection));
+  }
+
+  .btn-primary {
+    background: hsl(var(--action));
+    color: white;
+  }
+
+  .btn-primary:active {
+    background: hsl(var(--action-pressed));
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--text));
+  }
+
+  .btn-ghost:hover {
+    background: hsl(var(--bg-hover));
+  }
+
+  .btn-danger {
+    background: hsl(var(--danger));
+    color: white;
+  }
+
+  .btn-inline {
+    min-height: 44px;
+    padding: 10px 14px;
+    width: auto;
+  }
+
+  /* Inputs */
+  .input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: var(--r-sm);
+    background: hsl(var(--bg-surface));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--text));
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    outline: none;
+    transition: box-shadow var(--t-base), border-color var(--t-base);
+  }
+
+  .input::placeholder {
+    color: hsl(var(--text-3));
+  }
+
+  .input:focus {
+    border-color: hsl(var(--ring));
+    box-shadow: 0 0 0 3px hsl(var(--selection));
+  }
+
+  .textarea {
+    @apply input;
+    min-height: 110px;
+    resize: none;
+    padding-top: 12px;
+  }
+
+  /* Pills */
+  .pill {
+    @apply inline-flex items-center gap-2 font-medium;
+    min-height: 28px;
+    padding: 4px 10px;
+    border-radius: var(--r-pill);
+    background: hsl(var(--bg-muted));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--text-2));
+    font-size: var(--fs-meta);
+    line-height: var(--lh-meta);
+    white-space: nowrap;
+  }
+
+  .pill-success {
+    background: hsl(var(--a-soft));
+    border-color: hsl(var(--a-1));
+    color: hsl(var(--success));
+  }
+
+  .pill-neutral {
+    background: hsl(var(--bg-muted));
+    border-color: hsl(var(--border));
+    color: hsl(var(--text-2));
+  }
+
+  .pill-danger {
+    background: hsl(var(--danger-soft));
+    border-color: hsl(var(--danger-text));
+    color: hsl(var(--danger-text));
+  }
+
+  /* Inline “kbd” style meta badge */
+  .kbd {
+    @apply inline-flex items-center justify-center;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 9px;
+    background: hsl(var(--bg-surface));
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+    color: hsl(var(--text-2));
+    font-size: var(--fs-meta);
+    line-height: var(--lh-meta);
+    white-space: nowrap;
+  }
 }
