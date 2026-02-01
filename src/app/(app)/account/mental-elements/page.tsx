@@ -1,213 +1,133 @@
-"use client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useSession } from "@/hooks/useSession";
-import {
-  listMentalElements,
-  addMentalElement,
-  deleteMentalElement,
-} from "@/lib/mentalElements";
-
-type MentalElement = {
+export type MentalElement = {
   id: string;
+  user_id: string;
   label: string;
+  sort_order?: number | null;
+  created_at?: string | null;
 };
 
-function dangerText(msg: string) {
-  return (
-    <div className="meta" style={{ color: "hsl(var(--danger))" }}>
-      {msg}
-    </div>
-  );
+const TABLE_CANDIDATES = ["mental_elements", "mentalElements", "mental_element"];
+
+function normalizeRow(row: any): MentalElement {
+  return {
+    id: String(row.id),
+    user_id: String(row.user_id),
+    label: String(row.label ?? ""),
+    sort_order:
+      row.sort_order === undefined || row.sort_order === null ? null : Number(row.sort_order),
+    created_at: row.created_at ? String(row.created_at) : null,
+  };
 }
 
-export default function MentalElementsPage() {
-  const { session, isLoading, supabase } = useSession();
-  const userId = session?.user.id;
+async function trySelectList(supabase: SupabaseClient, userId: string) {
+  let lastErr: any = null;
 
-  const [items, setItems] = useState<MentalElement[]>([]);
-  const [newLabel, setNewLabel] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  for (const table of TABLE_CANDIDATES) {
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .eq("user_id", userId);
 
-  // ✅ SAFE LOAD — never call lib with null userId
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      if (!userId) {
-        setItems([]);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const list = await listMentalElements(supabase, userId);
-        if (!cancelled) setItems(list);
-      } catch (e: any) {
-        if (!cancelled)
-          setError(e?.message ?? "Failed to load mental elements.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    if (!isLoading) void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase, userId, isLoading]);
-
-  async function onAdd() {
-    if (!userId) return;
-
-    const label = newLabel.trim();
-    if (!label) return;
-
-    setSaving(true);
-    setError(null);
-
-    try {
-      await addMentalElement(supabase, userId, label);
-      setNewLabel("");
-      const list = await listMentalElements(supabase, userId);
-      setItems(list);
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to add mental element.");
-    } finally {
-      setSaving(false);
-    }
+    if (!error) return { table, data: (data ?? []) as any[] };
+    lastErr = error;
   }
 
-  async function onDelete(id: string) {
-    if (!userId) return;
+  throw lastErr ?? new Error("Failed to load mental elements.");
+}
 
-    setSaving(true);
-    setError(null);
+async function tryInsert(
+  supabase: SupabaseClient,
+  userId: string,
+  label: string,
+  sortOrder?: number | null
+) {
+  let lastErr: any = null;
 
-    try {
-      await deleteMentalElement(supabase, id);
-      const list = await listMentalElements(supabase, userId);
-      setItems(list);
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to delete mental element.");
-    } finally {
-      setSaving(false);
-    }
+  for (const table of TABLE_CANDIDATES) {
+    const payload: any = { user_id: userId, label };
+    if (sortOrder !== undefined) payload.sort_order = sortOrder;
+
+    const { data, error } = await supabase
+      .from(table)
+      .insert(payload)
+      .select("*")
+      .limit(1);
+
+    if (!error) return { table, row: (data?.[0] as any) ?? null };
+    lastErr = error;
   }
 
-  if (isLoading || loading) {
-    return (
-      <div className="container-app mode-briefing">
-        <div className="card card-pad">
-          <div className="meta">Loading…</div>
-        </div>
-      </div>
-    );
+  throw lastErr ?? new Error("Failed to add mental element.");
+}
+
+async function tryDelete(supabase: SupabaseClient, userId: string, id: string) {
+  let lastErr: any = null;
+
+  for (const table of TABLE_CANDIDATES) {
+    const { error } = await supabase.from(table).delete().eq("id", id).eq("user_id", userId);
+
+    if (!error) return { table };
+    lastErr = error;
   }
 
-  if (!userId) {
-    return (
-      <div className="container-app mode-briefing">
-        <div className="stack">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="title">Mental Elements</h1>
-              <div className="meta">Sign in required.</div>
-            </div>
-            <Link href="/login" className="btn btn-ghost btn-inline">
-              Login
-            </Link>
-          </div>
+  throw lastErr ?? new Error("Failed to delete mental element.");
+}
 
-          <div className="card card-pad">
-            <div className="meta">
-              Please sign in to manage your mental elements.
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+/**
+ * List mental elements for the current user.
+ * Sorted by sort_order if present, otherwise created_at.
+ */
+export async function listMentalElements(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<MentalElement[]> {
+  const { data } = await trySelectList(supabase, userId);
 
-  return (
-    <div className="container-app mode-briefing">
-      <div className="stack">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="title">Mental Elements</h1>
-            <div className="meta">
-              Cues you want to track (e.g. Commitment, Target).
-            </div>
-          </div>
+  const items = (data ?? []).map(normalizeRow);
 
-          <Link href="/account" className="btn btn-ghost btn-inline">
-            Back
-          </Link>
-        </div>
+  // stable sort: sort_order first (if any), else created_at, else label
+  items.sort((a, b) => {
+    const ao = a.sort_order ?? Number.POSITIVE_INFINITY;
+    const bo = b.sort_order ?? Number.POSITIVE_INFINITY;
+    if (ao !== bo) return ao - bo;
 
-        {error ? dangerText(error) : null}
+    const ad = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const bd = b.created_at ? new Date(b.created_at).getTime() : 0;
+    if (ad !== bd) return ad - bd;
 
-        <div className="card card-pad">
-          <div className="section-title">Add element</div>
+    return a.label.localeCompare(b.label);
+  });
 
-          <div className="stack-xs" style={{ marginTop: "var(--sp-3)" }}>
-            <input
-              className="input"
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="e.g. Commitment"
-              disabled={saving}
-            />
+  return items;
+}
 
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={onAdd}
-              disabled={saving || !newLabel.trim()}
-              style={{ width: "100%" }}
-            >
-              {saving ? "Saving…" : "Add"}
-            </button>
-          </div>
-        </div>
+/**
+ * Add a mental element for the current user.
+ */
+export async function addMentalElement(
+  supabase: SupabaseClient,
+  userId: string,
+  label: string
+): Promise<MentalElement> {
+  const clean = label.trim();
+  if (!clean) throw new Error("Label is required.");
 
-        <div className="card card-pad">
-          <div className="section-title">Your elements</div>
+  const { row } = await tryInsert(supabase, userId, clean);
+  if (!row) throw new Error("Failed to add mental element.");
 
-          <div className="stack-xs" style={{ marginTop: "var(--sp-4)" }}>
-            {items.length === 0 ? (
-              <div className="meta">No mental elements yet.</div>
-            ) : (
-              items.map((it, idx) => (
-                <div key={it.id} className="row row-compact">
-                  <div className="body">
-                    {idx + 1}. {it.label}
-                  </div>
+  return normalizeRow(row);
+}
 
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-inline"
-                    onClick={() => onDelete(it.id)}
-                    disabled={saving}
-                    aria-label={`Delete ${it.label}`}
-                    title="Delete"
-                    style={{ width: 44, paddingLeft: 0, paddingRight: 0 }}
-                  >
-                    🗑
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+/**
+ * Delete a mental element for the current user.
+ */
+export async function deleteMentalElement(
+  supabase: SupabaseClient,
+  userId: string,
+  elementId: string
+): Promise<void> {
+  if (!elementId) return;
+  await tryDelete(supabase, userId, elementId);
 }
