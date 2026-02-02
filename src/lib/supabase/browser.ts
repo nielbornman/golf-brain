@@ -1,4 +1,4 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient as createSSRBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 let cached: SupabaseClient | null = null;
@@ -15,20 +15,20 @@ function getEnv() {
 }
 
 /**
- * Browser-only Supabase client.
- * - No next/headers
- * - No createServerClient
- * - Safe for Client Components and Pages
+ * Canonical browser client factory (client-safe).
+ * IMPORTANT: no next/headers imports here.
  */
-export function createSupabaseBrowserClient(): SupabaseClient {
+export function createBrowserClient(): SupabaseClient {
   if (cached) return cached;
 
   const { url, anonKey } = getEnv();
-  cached = createBrowserClient(url, anonKey);
+  cached = createSSRBrowserClient(url, anonKey);
   return cached;
 }
 
-/** Optional alias for consistency with older imports */
-export function createBrowserClientSingleton(): SupabaseClient {
-  return createSupabaseBrowserClient();
+/**
+ * Backwards-compatible alias for older call sites.
+ */
+export function createSupabaseBrowserClient(): SupabaseClient {
+  return createBrowserClient();
 }

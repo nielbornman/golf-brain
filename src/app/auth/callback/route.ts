@@ -1,28 +1,22 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export function createSupabaseServerClient(): SupabaseClient {
-  const cookieStore = cookies();
+export async function GET(req: Request) {
+  const { searchParams, origin } = new URL(req.url);
+  const code = searchParams.get("code");
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  if (!code) {
+    return NextResponse.redirect(`${origin}/login?error=Missing%20code`);
   }
 
-  return createServerClient(url, anonKey, {
-    cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value;
-      },
-      set(name, value, options) {
-        cookieStore.set({ name, value, ...options });
-      },
-      remove(name, options) {
-        cookieStore.set({ name, value: "", ...options });
-      },
-    },
-  });
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent(error.message)}`
+    );
+  }
+
+  return NextResponse.redirect(`${origin}/scorecard`);
 }
