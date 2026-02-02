@@ -290,7 +290,7 @@ export default function DashboardPage() {
 
                       <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
                         <div className="pill pill-neutral">{r.strokeCount} strokes</div>
-                        <div className="pill pill-success">MF {r.mentalPct}%</div>
+                        <div className="pill pill-success">YES {r.mentalPct}%</div>
 
                         <button
                           type="button"
