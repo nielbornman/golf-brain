@@ -22,7 +22,6 @@ function dangerText(msg: string) {
 export default function MentalElementsPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const { session, isLoading } = useSession();
-
   const userId = session?.user.id; // string | undefined
 
   const [items, setItems] = useState<MentalElement[]>([]);
@@ -46,9 +45,7 @@ export default function MentalElementsPage() {
       return;
     }
 
-    // ✅ capture a non-optional uid for closure use
     const uid = userId;
-
     let cancelled = false;
 
     async function load() {
