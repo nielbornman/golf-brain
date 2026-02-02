@@ -15,18 +15,17 @@ function getEnv() {
 }
 
 /**
- * Browser client (PKCE-friendly).
- * IMPORTANT: do NOT import next/headers here.
+ * Browser-only Supabase client.
+ * IMPORTANT: no `next/headers` imports here.
  */
 export function createBrowserClient(): SupabaseClient {
   if (cached) return cached;
-
   const { url, anonKey } = getEnv();
   cached = createSSRBrowserClient(url, anonKey);
   return cached;
 }
 
-/** Backwards-compatible alias for older call sites. */
+/** Backwards compatible alias */
 export function createSupabaseBrowserClient(): SupabaseClient {
   return createBrowserClient();
 }

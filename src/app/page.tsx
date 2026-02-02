@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function Home() {
-  redirect("/dashboard"); // or "/login" if you prefer
+export default function RootPage() {
+  // Pick the default entry for the app:
+  redirect("/login");
 }

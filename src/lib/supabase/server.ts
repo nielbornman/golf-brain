@@ -1,5 +1,5 @@
-import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function getEnv() {
@@ -13,13 +13,9 @@ function getEnv() {
   return { url, anonKey };
 }
 
-/**
- * Server client (App Router).
- * Uses Next cookies store for PKCE code verifier + session.
- */
 export function createSupabaseServerClient(): SupabaseClient {
-  const { url, anonKey } = getEnv();
   const cookieStore = cookies();
+  const { url, anonKey } = getEnv();
 
   return createServerClient(url, anonKey, {
     cookies: {
