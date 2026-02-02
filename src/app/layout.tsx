@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
 <head>
-  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-v2.png" />
   <link rel="icon" href="/favicon.ico" sizes="any" />
 </head>
       <body className="min-h-screen">
