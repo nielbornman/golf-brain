@@ -1,25 +1,34 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export function createSupabaseServerClient() {
-  const cookieStore = cookies();
+let cached: SupabaseClient | null = null;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+function getEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!url || !anonKey) throw new Error("Missing Supabase env vars");
+  if (!url || !anonKey) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  }
 
-  return createServerClient(url, anonKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet) {
-        // Next.js requires setting cookies via the cookieStore
-        cookiesToSet.forEach(({ name, value, options }) => {
-          cookieStore.set(name, value, options);
-        });
-      },
-    },
-  });
+  return { url, anonKey };
+}
+
+/**
+ * Browser-only Supabase client.
+ * - No next/headers
+ * - No createServerClient
+ * - Safe for Client Components and Pages
+ */
+export function createSupabaseBrowserClient(): SupabaseClient {
+  if (cached) return cached;
+
+  const { url, anonKey } = getEnv();
+  cached = createBrowserClient(url, anonKey);
+  return cached;
+}
+
+/** Optional alias for consistency with older imports */
+export function createBrowserClientSingleton(): SupabaseClient {
+  return createSupabaseBrowserClient();
 }
