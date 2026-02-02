@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "@/hooks/useSession";
 import { useHomeClub } from "@/hooks/useHomeClub";
@@ -126,9 +126,9 @@ function ConfirmModal({
 
 export default function DashboardPage() {
   const { session, isLoading, supabase } = useSession();
-  const userId = session?.user.id ?? null;
+  const userId = session?.user.id; // string | undefined
 
-  const homeClub = useHomeClub(userId ?? undefined);
+  const homeClub = useHomeClub(userId);
 
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(true);
@@ -137,19 +137,17 @@ export default function DashboardPage() {
   const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [busy, setBusy] = useState(false);
 
-  const courseName = useMemo(() => {
-    return homeClub.status === "present" ? homeClub.name : "Course";
-  }, [homeClub.status, homeClub.name]);
+  // ✅ No useMemo needed; avoids union type issues entirely
+  const courseName = homeClub.status === "present" ? homeClub.name : "Course";
 
-  async function reload() {
-    if (!userId) return;
+  async function reloadWith(uid: string) {
     if (homeClub.status !== "present") return;
 
     setLoadingSummary(true);
     setErr(null);
 
     try {
-      const s = await getDashboardSummary(supabase, userId);
+      const s = await getDashboardSummary(supabase, uid);
       setSummary(s);
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load dashboard.");
@@ -159,7 +157,10 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    void reload();
+    if (!userId) return;
+    const uid = userId;
+
+    void reloadWith(uid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, userId, homeClub.status]);
 
@@ -301,18 +302,21 @@ export default function DashboardPage() {
                             e.preventDefault();
                             e.stopPropagation();
 
+                            if (!userId) return;
+                            const uid = userId;
+                            const roundId = r.roundId;
+
                             setConfirm({
                               title: "Delete round?",
                               body: "This will permanently remove the round and its strokes.",
                               confirmLabel: "Delete",
                               danger: true,
                               onConfirm: async () => {
-                                if (!userId) return;
                                 setBusy(true);
                                 setErr(null);
                                 try {
-                                  await deleteRoundById(supabase, userId, r.roundId);
-                                  await reload();
+                                  await deleteRoundById(supabase, uid, roundId);
+                                  await reloadWith(uid);
                                   setConfirm(null);
                                 } catch (ex: any) {
                                   setErr(ex?.message ?? "Failed to delete round.");

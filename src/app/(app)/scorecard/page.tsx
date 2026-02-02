@@ -140,10 +140,10 @@ function ConfirmModal({
 export default function ScorecardPage() {
   const { session, isLoading, supabase } = useSession();
 
-  // IMPORTANT: keep userId as string | null, but never pass it where string is required unless guarded.
-  const userId = session?.user.id ?? null;
+  // ✅ keep as string | undefined (no null)
+  const userId = session?.user.id;
 
-  const homeClub = useHomeClub(userId ?? undefined);
+  const homeClub = useHomeClub(userId);
 
   const [round, setRound] = useState<RoundRow | null>(null);
   const [activeHole, setActiveHole] = useState<number>(1);
@@ -167,7 +167,7 @@ export default function ScorecardPage() {
     [bag, selectedClubId]
   );
 
-  // Load mental elements (for cues) — ✅ guard userId
+  // Load mental elements (for cues)
   useEffect(() => {
     if (!userId) {
       setMentalElements([]);
@@ -175,12 +175,13 @@ export default function ScorecardPage() {
       return;
     }
 
+    const uid = userId; // ✅ capture for closure
     let cancelled = false;
 
     async function load() {
       setLoadingElements(true);
       try {
-        const list = await listMentalElements(supabase, userId);
+        const list = await listMentalElements(supabase, uid);
         if (!cancelled) setMentalElements(list);
       } catch {
         if (!cancelled) setMentalElements([]);
@@ -195,15 +196,16 @@ export default function ScorecardPage() {
     };
   }, [supabase, userId]);
 
-  // Load bag clubs — ✅ guard userId
+  // Load bag clubs (for BSM + optional club selection)
   useEffect(() => {
     if (!userId) return;
 
+    const uid = userId; // ✅ capture for closure
     let cancelled = false;
 
     async function loadBag() {
       try {
-        const list = await listBagClubs(supabase, userId);
+        const list = await listBagClubs(supabase, uid);
         if (cancelled) return;
         setBag(list);
         setSelectedClubId(list[0]?.id ?? "");
@@ -218,7 +220,7 @@ export default function ScorecardPage() {
     };
   }, [supabase, userId]);
 
-  // Load or resume active round — ✅ guard userId
+  // Load or resume active round
   useEffect(() => {
     if (!userId) {
       setRound(null);
@@ -230,6 +232,7 @@ export default function ScorecardPage() {
     }
     if (homeClub.status !== "present") return;
 
+    const uid = userId; // ✅ capture for closure
     let cancelled = false;
 
     async function loadRound() {
@@ -237,7 +240,7 @@ export default function ScorecardPage() {
       setError(null);
 
       try {
-        const active = await getActiveRound(supabase, userId);
+        const active = await getActiveRound(supabase, uid);
         if (cancelled) return;
 
         if (!active) {
@@ -296,13 +299,15 @@ export default function ScorecardPage() {
     if (!userId) return;
     if (homeClub.status !== "present") return;
 
+    const uid = userId;
+
     setSaving(true);
     setError(null);
 
     try {
       const created = await startRound(
         supabase,
-        userId,
+        uid,
         homeClub.id,
         homeClub.holesCount,
         homeClub.pars
@@ -369,12 +374,14 @@ export default function ScorecardPage() {
     if (!round || !userId) return;
     if (holeNumber < 1 || holeNumber > round.holes_count) return;
 
+    const uid = userId;
+
     setSaving(true);
     setError(null);
 
     try {
       setActiveHole(holeNumber);
-      await setCurrentHole(supabase, userId, round.id, holeNumber);
+      await setCurrentHole(supabase, uid, round.id, holeNumber);
       await refreshHole(round.id, holeNumber);
     } catch (e: any) {
       setError(e?.message ?? "Failed to change hole.");
@@ -385,6 +392,7 @@ export default function ScorecardPage() {
 
   async function onCompleteRound() {
     if (!round || !userId) return;
+    const uid = userId;
 
     setConfirm({
       title: "Complete round?",
@@ -396,7 +404,7 @@ export default function ScorecardPage() {
         setError(null);
 
         try {
-          await completeRound(supabase, userId, round.id);
+          await completeRound(supabase, uid, round.id);
           localStorage.removeItem(roundKey(round.id));
           setRound(null);
           setActiveHole(1);
@@ -412,7 +420,6 @@ export default function ScorecardPage() {
     });
   }
 
-  // Gate: session loading OR homeclub loading OR round loading
   if (isLoading || homeClub.status === "loading" || loadingRound) {
     return (
       <div className="container-app mode-performance">
@@ -421,7 +428,6 @@ export default function ScorecardPage() {
     );
   }
 
-  // If not signed in, route gently
   if (!userId) {
     return (
       <div className="container-app mode-performance">
@@ -435,7 +441,6 @@ export default function ScorecardPage() {
     );
   }
 
-  // Setup gate
   if (homeClub.status === "missing") {
     return (
       <div className="container-app mode-performance">
@@ -699,7 +704,7 @@ export default function ScorecardPage() {
         title={confirm?.title ?? ""}
         body={confirm?.body}
         confirmLabel={confirm?.confirmLabel}
-        danger={confirm?.danger}
+        danger={!!confirm?.danger}
         onConfirm={confirm?.onConfirm ?? (() => {})}
         busy={saving}
       />
