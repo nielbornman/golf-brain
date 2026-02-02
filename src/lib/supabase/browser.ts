@@ -15,8 +15,8 @@ function getEnv() {
 }
 
 /**
- * Canonical browser client factory (client-safe).
- * IMPORTANT: no next/headers imports here.
+ * Browser client (PKCE-friendly).
+ * IMPORTANT: do NOT import next/headers here.
  */
 export function createBrowserClient(): SupabaseClient {
   if (cached) return cached;
@@ -26,9 +26,7 @@ export function createBrowserClient(): SupabaseClient {
   return cached;
 }
 
-/**
- * Backwards-compatible alias for older call sites.
- */
+/** Backwards-compatible alias for older call sites. */
 export function createSupabaseBrowserClient(): SupabaseClient {
   return createBrowserClient();
 }
