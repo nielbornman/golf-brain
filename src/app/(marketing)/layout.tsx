@@ -4,11 +4,9 @@ import MarketingFooter from "@/components/marketing/Footer";
 
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen" style={{ background: "hsl(var(--bg))", color: "hsl(var(--text))" }}>
+    <div className="min-h-screen bg-white text-slate-900">
       <MarketingHeader />
-      <main className="container-app mode-briefing">
-        <div className="stack">{children}</div>
-      </main>
+      <main className="mx-auto w-full max-w-md px-4">{children}</main>
       <MarketingFooter />
     </div>
   );
