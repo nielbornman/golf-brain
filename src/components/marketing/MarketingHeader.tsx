@@ -1,173 +1,137 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSession } from "@/hooks/useSession";
 
-type NavItem = { label: string; href: string };
+type Props = {
+  /** Optional override for demos/tests */
+  isAuthedOverride?: boolean;
+};
 
-const NAV: NavItem[] = [
-  { label: "Home", href: "/" },
-  { label: "Product", href: "/product" },
-  { label: "Why mental", href: "/why-mental" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "About", href: "/about" },
-  { label: "Contact", href: "/contact" },
-  { label: "Privacy", href: "/privacy" },
-  { label: "Terms", href: "/terms" },
+const NAV = [
+  { href: "/", label: "Home" },
+  { href: "/product", label: "Product" },
+  { href: "/why-mental", label: "Why mental" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
 ];
 
-function cx(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
-
-export default function MarketingHeader() {
-  const { session, isLoading } = useSession();
-  const isAuthed = useMemo(() => !!session?.user?.id, [session?.user?.id]);
+export default function MarketingHeader({ isAuthedOverride }: Props) {
+  // Replace with your real session check if you want "Open App" logic.
+  const isAuthed = useMemo(() => {
+    if (typeof isAuthedOverride === "boolean") return isAuthedOverride;
+    return false;
+  }, [isAuthedOverride]);
 
   const [open, setOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    if (open) window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
+    function onDoc(e: MouseEvent) {
       if (!open) return;
       const t = e.target as Node;
-      if (panelRef.current && !panelRef.current.contains(t)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(t)) setOpen(false);
     }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onEsc);
+    };
   }, [open]);
 
-  const primaryHref = isAuthed ? "/scorecard" : "/login";
+  const primaryHref = isAuthed ? "/dashboard" : "/login";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur">
-      <div className="mx-auto w-full max-w-5xl px-4">
-        <div className="flex h-16 items-center justify-between">
-          {/* Brand */}
-          <Link href="/" className="flex items-center gap-3">
-            {/* Use a stable icon path in /public/icons */}
-            <div className="relative h-10 w-10 overflow-hidden rounded-2xl border border-slate-200/70 bg-white">
-              <Image
-                src="/icons/icon-120.png"
-                alt="Golf Brain"
-                fill
-                sizes="40px"
-                priority
-              />
+    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-100">
+      <div className="mx-auto w-full max-w-md px-4 py-3 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3">
+          <img
+            src="/icons/icon-180.png"
+            alt="Golf Brain"
+            className="h-10 w-10 rounded-2xl border border-slate-200/70 bg-white object-cover"
+            onError={(e) => {
+              // fallback to another common icon path if needed
+              (e.currentTarget as HTMLImageElement).src = "/icons/icon-192.png";
+            }}
+          />
+          <div className="leading-tight">
+            <div className="text-sm font-semibold tracking-tight text-slate-900">
+              Golf Brain
             </div>
+            <div className="text-xs text-slate-600">
+              Remind • Record • Reduce Strokes
+            </div>
+          </div>
+        </Link>
 
-            <div className="leading-tight">
-              <div className="text-base font-semibold tracking-tight text-slate-900">
-                Golf Brain
-              </div>
-              <div className="text-xs font-medium text-slate-600">
-                Remind • Record • Reduce Strokes
-              </div>
-            </div>
+        <div className="flex items-center gap-2" ref={wrapRef}>
+          <Link
+            href={primaryHref}
+            className="px-3 py-2 rounded-full text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 transition"
+          >
+            {isAuthed ? "Open App" : "Start free"}
           </Link>
 
-          {/* Right controls */}
-          <div className="relative flex items-center gap-2">
-            {/* Primary CTA: small pill */}
-            <Link
-              href={primaryHref}
-              className={cx(
-                "rounded-full px-4 py-2 text-sm font-semibold",
-                "text-white",
-                // Prefer your V1 brand token if present; fallback to emerald.
-                "bg-emerald-600 hover:bg-emerald-700",
-                "transition-colors"
-              )}
-              aria-disabled={isLoading}
-            >
-              {isAuthed ? "Open app" : "Start free"}
-            </Link>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="h-10 w-10 rounded-full border border-slate-200/70 bg-white hover:bg-slate-50 active:bg-slate-100 transition flex items-center justify-center"
+            aria-label="Menu"
+            aria-expanded={open}
+          >
+            <div className="w-4 space-y-1">
+              <div className="h-0.5 bg-slate-900/80" />
+              <div className="h-0.5 bg-slate-900/80" />
+              <div className="h-0.5 bg-slate-900/80" />
+            </div>
+          </button>
 
-            {/* Burger */}
-            <button
-              type="button"
-              onClick={() => setOpen((v) => !v)}
-              className={cx(
-                "h-10 w-10 rounded-full border border-slate-200/70 bg-white",
-                "grid place-items-center",
-                "hover:bg-slate-50 transition-colors"
-              )}
-              aria-label="Open menu"
-              aria-expanded={open}
-            >
-              <div className="w-4 space-y-1">
-                <div className="h-0.5 rounded bg-slate-800/80" />
-                <div className="h-0.5 rounded bg-slate-800/80" />
-                <div className="h-0.5 rounded bg-slate-800/80" />
+          {open ? (
+            <div className="absolute top-[56px] right-4 w-[260px] max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200/70 bg-white shadow-sm p-2">
+              <div className="px-2 py-2">
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="block rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  Log in
+                </Link>
               </div>
-            </button>
 
-            {/* Simple, non-intrusive drawer (not a modal) */}
-            {open ? (
-              <div
-                ref={panelRef}
-                className={cx(
-                  "absolute right-0 top-12 w-72 overflow-hidden",
-                  "rounded-3xl border border-slate-200/70 bg-white",
-                  "shadow-[0_16px_40px_rgba(15,23,42,0.10)]"
-                )}
-              >
-                <nav className="p-2">
-                  <div className="px-2 py-2 text-xs font-semibold text-slate-500">
-                    Menu
-                  </div>
+              <div className="h-px bg-slate-100 my-1" />
 
-                  <div className="space-y-1">
-                    {NAV.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        className={cx(
-                          "flex items-center justify-between rounded-2xl px-3 py-3",
-                          "text-sm font-medium text-slate-900",
-                          "hover:bg-slate-50 transition-colors"
-                        )}
-                      >
-                        <span>{item.label}</span>
-                        <span className="text-slate-400">›</span>
-                      </Link>
-                    ))}
-                  </div>
+              <nav className="px-1">
+                {NAV.map((i) => (
+                  <Link
+                    key={i.href}
+                    href={i.href}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-slate-800 hover:bg-slate-50"
+                  >
+                    <span>{i.label}</span>
+                    <span className="text-slate-400">›</span>
+                  </Link>
+                ))}
+              </nav>
 
-                  <div className="mt-2 border-t border-slate-200/70 p-2">
-                    {!isAuthed ? (
-                      <Link
-                        href="/login"
-                        onClick={() => setOpen(false)}
-                        className="block rounded-2xl px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        Log in
-                      </Link>
-                    ) : (
-                      <Link
-                        href="/scorecard"
-                        onClick={() => setOpen(false)}
-                        className="block rounded-2xl px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        Go to scorecard
-                      </Link>
-                    )}
-                  </div>
-                </nav>
+              <div className="h-px bg-slate-100 my-2" />
+
+              <div className="px-2 pb-2">
+                <Link
+                  href={primaryHref}
+                  onClick={() => setOpen(false)}
+                  className="block w-full text-center px-4 py-3 rounded-2xl text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 transition"
+                >
+                  {isAuthed ? "Open App" : "Start free"}
+                </Link>
               </div>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </header>
