@@ -7,7 +7,7 @@ import PricingCards from "@/components/marketing/PricingCards";
 export default function HomePage() {
   return (
     <div>
-      {/* Hero */}
+            {/* Hero */}
       <section className="pt-10 pb-6">
         <p className="inline-flex items-center rounded-full border border-slate-200/70 bg-white px-3 py-1 text-xs font-medium text-slate-600">
           Mental-performance training for real rounds
