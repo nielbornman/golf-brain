@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import Section from "@/components/marketing/Section";
 import Card from "@/components/marketing/Card";
