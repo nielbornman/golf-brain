@@ -24,35 +24,22 @@ export default function AccountPage() {
           <div className="meta">Setup & memory.</div>
         </div>
 
-        {/* Status */}
-        <div className="card card-pad">
-          <div className="section-title">Status</div>
 
+        {/* Setup */}
+        <div className="card card-pad">
+          
+          <div className="section-title">Status</div>
           <div className="stack-xs" style={{ marginTop: "var(--sp-3)" }}>
             <div className="meta">
               Signed in as: {isLoading ? "Loading…" : session?.user.email ?? "—"}
             </div>
-            <div className="meta">{homeClubStatus}</div>
           </div>
-        </div>
-
-        {/* Setup */}
-        <div className="card card-pad">
-          <div className="section-title">Setup</div>
           <div className="meta" style={{ marginTop: "var(--sp-2)" }}>
-            Configure the foundations that unlock Scorecard + Dashboard.
+            Configure the foundations that unlocks the Scorecard + Dashboard features of the Golf Brain app.
           </div>
 
           <div style={{ marginTop: "var(--sp-4)" }}>
             <div className="inset-list">
-              <Link href="/account/home-club" className="inset-row">
-                <div className="stack-xs" style={{ gap: "4px" }}>
-                  <div className="body">Home Club</div>
-                  <div className="meta">Holes + par per hole.</div>
-                </div>
-                <div className="meta">›</div>
-              </Link>
-
               <Link href="/account/mental-elements" className="inset-row">
                 <div className="stack-xs" style={{ gap: "4px" }}>
                   <div className="body">Mental Elements</div>
@@ -68,8 +55,17 @@ export default function AccountPage() {
                 </div>
                 <div className="meta">›</div>
               </Link>
+              <Link href="/account/home-club" className="inset-row">
+                <div className="stack-xs" style={{ gap: "4px" }}>
+                  <div className="body">Home Club</div>
+                  <div className="meta">Holes + par per hole.</div>
+                </div>
+                <div className="meta">›</div>
+              </Link>
+
             </div>
           </div>
+          
         </div>
       </div>
     </div>
