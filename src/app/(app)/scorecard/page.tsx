@@ -362,7 +362,7 @@ export default function ScorecardPage() {
     const nonce = refreshNonceRef.current + 1;
     refreshNonceRef.current = nonce;
 
-    const list = await listStrokesForHole(supabase, roundId, holeNumber);
+    const list = await listAllStrokesForHole(roundId, holeNumber);
     const sorted = list.slice().sort((a, b) => Number(a.seq) - Number(b.seq));
 
     if (refreshNonceRef.current !== nonce) return;
@@ -382,21 +382,44 @@ export default function ScorecardPage() {
     setIsHoleCommitted(committed);
   }
 
-  async function commitHole(roundId: string, holeNumber: number) {
-    await supabase
-      .from("round_holes")
-      .update({ is_committed: true })
-      .eq("round_id", roundId)
-      .eq("hole_number", holeNumber);
+// === GB_V2_PATCH_COMMIT_HOLE ===
+async function commitHole(roundId: string, holeNumber: number) {
+  // 1) Mark the hole committed
+  const { error: hErr } = await supabase
+    .from("round_holes")
+    .update({ is_committed: true })
+    .eq("round_id", roundId)
+    .eq("hole_number", holeNumber);
 
-    await supabase
-      .from("strokes")
-      .update({ is_counted: true })
-      .eq("round_id", roundId)
-      .eq("hole_number", holeNumber);
+  if (hErr) throw hErr;
 
-    setIsHoleCommitted(true);
-  }
+  // 2) Flip strokes on that hole from uncounted to counted
+  const { error: sErr } = await supabase
+    .from("strokes")
+    .update({ is_counted: true })
+    .eq("round_id", roundId)
+    .eq("hole_number", holeNumber)
+    .eq("is_counted", false);
+
+  if (sErr) throw sErr;
+
+  setIsHoleCommitted(true);
+}
+// === GB_V2_PATCH_LIST_ALL_STROKES ===
+// Scorecard must show BOTH counted and uncounted strokes.
+// Dashboard/History filter to is_counted=true, but the Scorecard UI must show everything.
+async function listAllStrokesForHole(roundId: string, holeNumber: number) {
+  const { data, error } = await supabase
+    .from("strokes")
+    .select("id, round_id, hole_number, seq, stroke_type, mental_ok, club_id, is_counted, created_at, updated_at")
+    .eq("round_id", roundId)
+    .eq("hole_number", holeNumber)
+    .order("seq", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as StrokeRow[];
+}
+
 
   useEffect(() => {
     if (!userId) {
@@ -675,7 +698,7 @@ export default function ScorecardPage() {
     try {
       const counted = roundUsesCourseDefaults ? isHoleCommitted : true;
 
-      const existing = await listStrokesForHole(supabase, rid, activeHole);
+      const existing = await listAllStrokesForHole(rid, activeHole);
       const sorted = existing.slice().sort((a, b) => Number(a.seq) - Number(b.seq));
 
       const newKey = orderOf(String(dbType));
